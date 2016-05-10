@@ -39,6 +39,7 @@ type handler struct {
 
 // ServeHTTP duplicates the incoming request (req) and does the request to the Target and the Alternate target discading the Alternate response
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	fmt.Printf("REQUEST\n")
 	var productionRequest, alternativeRequest *http.Request
 	if *percent == 100.0 || h.Randomizer.Float64()*100 < *percent {
 		alternativeRequest, productionRequest = DuplicateRequest(req)
@@ -68,13 +69,14 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 				return
 			}
-			_, err = clientHttpConn.Read(alternativeRequest) // Read back the reply
-			if err != nil {
+			resp, err := clientHttpConn.Read(alternativeRequest) // Read back the reply
+			if err != nil && resp.StatusCode != 200 {
 				if *debug {
 					fmt.Printf("Failed to receive from %s: %v\n", h.Alternative, err)
 				}
 				return
 			}
+			fmt.Printf("ALTERNATE\n")
 		}()
 	} else {
 		productionRequest = req
@@ -112,6 +114,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 	body, _ := ioutil.ReadAll(resp.Body)
 	w.Write(body)
+	fmt.Printf("PRIMARY\n")
 }
 
 func main() {
